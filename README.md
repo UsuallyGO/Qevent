@@ -1,0 +1,6 @@
+Qevent is a C programming library for event driven.
+The first day of this project is Jan 31st, 2016.
+Just a shanzai version of 'libevent', libev and many many other open sources...
+
+Just for learning and practicing....
+Email:qinliok@126.com

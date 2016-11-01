@@ -1,0 +1,69 @@
+#!/bin/sh
+func_help () {
+    echo \'build_test\' build Qevent test suite.
+    echo Usage: $* [OPTIONS]... 
+    echo Options:
+    echo "-d, --debug     Build with debug information."
+    echo "-h, --help      Shows this help message."
+    echo "--prefix DIR    Installs to DIR [default /usr/local]."
+    echo "--clean         Removes files created by the build system."
+}
+
+cur_dir=$PWD
+cd $(dirname $0)
+cd ..
+src_dir=$PWD
+cd $cur_dir
+
+target=qtest
+source=$src_dir/test
+opt_debug=-DCMAKE_BUILD_TYPE=RELEASE
+opt_prefix=/usr/local
+
+while test $# -gt 0; do
+    opt=$1
+    shift
+    case $opt in
+      -d|--debug) opt_debug=-DCMAKE_BUILD_TYPE=DEBUG
+                  ;;
+      -h|--help)  func_help $0
+                  exit 0
+                  ;;
+      --prefix)   opt_prefix=$1
+                   shift
+                  ;;
+      --clean)    opt_action=4
+                  ;;
+      *)          func_help $0
+                  exit 0
+                  ;;
+    esac
+done
+
+if test ! -d $target; then
+    echo [Creates directory $target]
+    mkdir $target
+    if test ! -d $target; then
+        echo Failed to create directory.
+        exit -1
+    fi
+fi
+
+MAKE=make
+MAKEFILE="CodeBlocks - Unix Makefiles"
+case "$(uname)" in
+  MINGW32*)
+    MAKE=mingw32-make
+    MAKEFILE="CodeBlocks - MinGW Makefiles"
+    ;;
+esac
+
+cd $target
+if test ! -f Makefile \
+|| test Makefile -ot $source/CMakeLists.txt; then
+  echo [Configure $target]
+  # "sh -c" is required by msys shell
+  sh -c "cmake -G\"$MAKEFILE\" -DCMAKE_INSTALL_PREFIX=$opt_prefix $opt_debug $source"
+fi
+echo [Make $target]; $MAKE
+echo [Make install]; $MAKE install

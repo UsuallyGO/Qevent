@@ -1,0 +1,82 @@
+#!/bin/sh
+
+func_help(){
+    echo \'build_qevent\' build the Qevent and depended libraries.
+    echo Usage: $* [OPTIONS]...
+    echo Options:
+    echo "-d, --debug    Build with debug information."
+    echo "-h, --help     Shows Qevent build help message."
+    echo "--prefix DIR   Specify install directory [default /usr/local]."
+    echo "--clean        Remove all files created by build system."
+}
+
+func_mkdir(){
+    if test -n $1; then
+      if test ! -d $1; then
+        echo [Creates directory $1]
+        mkdir $1
+        if test ! -d $1; then
+          echo Failed to create directory.
+          exit -1
+        fi
+      fi
+    fi
+}
+
+cur_dir=$PWD
+cd $(dirname $0)
+cd ..
+src_dir=$PWD
+cd $cur_dir
+
+opt_debug=false
+opt_prefix=/usr/local
+opt_clean=false
+
+while test $# -gt 0; do
+    opt=$1
+    shift
+    case $opt in
+      -d|--debug) opt_debug=:
+                  ;;
+      -h|--help)  func_help $0
+                  exit 0
+                  ;;
+      --prefix)   opt_prefix=$1
+                  shift
+                  ;;
+      --clean)    opt_clean=:
+                  ;;
+      *)          func_help $0
+                   exit 0
+                  ;;
+    esac
+done
+
+cmake_debug="-DCMAKE_BUILD_TYPE=RELEASE"
+if $opt_debug; then
+    cmake_debug="-DCMAKE_BUILD_TYPE=DEBUG"
+fi
+
+cmake_install="install"
+
+echo $(basename $0) is building Qevent
+func_mkdir qevent; cd qevent
+MAKE=make
+MAKEFILE="CodeBlocks - Unix Makefiles"
+Q_libqevent=libqevent.so
+case "$(uname)" in
+  MINGW32*)
+    MAKE=mingw32-make
+    MAKEFILE="CodeBlocks - MinGW Makefiles"
+    Q_libqevent=libqevent.dll.a
+    ;;
+esac
+#"sh -c" is required by msys shell
+sh -c "cmake -G\"$MAKEFILE\" -DCMAKE_INSTALL_PREFIX=$opt_prefix $cmake_debug $src_dir/src/"
+echo [Make Qevent]; $MAKE
+if test ! -f $opt_prefix/lib/$Q_libqevent \
+|| test $Q_libqevent -nt $opt_prefix/lib/$Q_libqevent; then
+   echo [Install Qevent]
+   $MAKE $cmake_install
+fi
